@@ -1,0 +1,68 @@
+#!/bin/sh
+
+CL_NO_COLOR=""
+CL_GREEN=""
+CL_YELLOW=""
+CL_RED=""
+
+NTFS_MOUNT="/Volumes/NTFS"
+DEVICE_MARKER="%%DEVICE%%"
+
+CMD_DISKUTIL="diskutil list"
+CMD_UMOUNT="sudo umount ${DEVICE_MARKER}"
+CMD_MKDIR="sudo mkdir -p ${NTFS_MOUNT}"
+CMD_MOUNT="sudo ntfs-3g ${DEVICE_MARKER} ${NTFS_MOUNT} -olocal -oallow_other -ouid=$(id -u) -ogid=$(id -g)"
+echo $CMD_MOUNT
+
+function print_cmd() {
+	echo "$ $1"
+}
+
+if [[ -f "$LOCAL_LIBS/colors" ]]
+then
+	source "$LOCAL_LIBS/colors"
+	CL_NO_COLOR=$Color_Off
+	CL_GREEN=$Green
+	CL_YELLOW=$Yellow
+	CL_RED=$Red
+else
+	echo "no colors"
+fi
+
+echo "${CL_GREEN}Let me know ntfs disk identifier from the output diskutil list${CL_NO_COLOR}"
+print_cmd "${CMD_DISKUTIL}"
+echo "${CL_YELLOW}"
+eval $CMD_DISKUTIL
+echo "${CL_GREEN}"
+
+read -p "Please, write the device identifier: " DEVICE_ID
+
+if [[ -z "$DEVICE_ID" ]]
+then
+	echo "${CL_RED}Empty device identifier not allowed, exit${CL_NO_COLOR}"
+	exit 1
+fi
+
+echo ${CL_NO_COLOR}
+CMD_UMOUNT=$(echo ${CMD_UMOUNT} | sed -e "s~${DEVICE_MARKER}~/dev/${DEVICE_ID}~g")
+print_cmd "${CMD_UMOUNT}"
+echo $CL_YELLOW
+eval $CMD_UMOUNT
+
+if [[ ! -d ${NTFS_MOUNT} ]]
+then
+	echo ${CL_NO_COLOR}
+	print_cmd "${CMD_MKDIR}"
+	echo $CL_YELLOW
+	eval $CMD_MKDIR
+fi
+
+echo $CL_NO_COLOR
+CMD_MOUNT=$(echo ${CMD_MOUNT} | sed -e "s~${DEVICE_MARKER}~/dev/${DEVICE_ID}~g")
+print_cmd "${CMD_MOUNT}"
+echo $CL_YELLOW
+eval $CMD_MOUNT
+echo $CL_NO_COLOR
+
+echo "${CL_GREEN}Finishing, success. Device ${DEVICE_ID} is mounted to ${NTFS_MOUNT}${CL_NO_COLOR}"
+ls -al ${NTFS_MOUNT}
